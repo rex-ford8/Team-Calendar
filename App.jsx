@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const DEFAULT_MEMBERS = [
-  { id: 1, name: "Alex", email: "", color: "#E8704A", initials: "AX" },
+  { id: 1, name: "Rexford", email: "", color: "#E8704A", initials: "AX" },
   { id: 2, name: "Jordan", email: "", color: "#4A90D9", initials: "JD" },
   { id: 3, name: "Morgan", email: "", color: "#5BB87A", initials: "MG" },
   { id: 4, name: "Riley", email: "", color: "#B87AC8", initials: "RL" },
