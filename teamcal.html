@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TeamCal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,700;0,900;1,600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #F7F3EE; font-family: 'DM Mono', monospace; color: #1A1A1A; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #D0C8BE; border-radius: 2px; }
+
+  /* LAYOUT */
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
+
+  /* HEADER */
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+  .logo { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+  .logo span { font-style: italic; color: #E8704A; }
+  .logo-sub { font-size: 10px; color: #AAA; margin-top: 6px; letter-spacing: 0.18em; }
+  .members-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .member-badge { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; border: 1.5px solid; }
+  .member-avatar { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; font-weight: 600; }
+  .settings-btn { border: 1.5px solid #E0DAD2; background: transparent; color: #999; padding: 5px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; font-family: 'DM Mono', monospace; letter-spacing: 0.05em; transition: background 0.15s; }
+  .settings-btn:hover { background: #EDE8E2; }
+
+  /* MONTH NAV */
+  .month-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .nav-btn { border: 1.5px solid #E0DAD2; background: transparent; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; transition: background 0.15s; }
+  .nav-btn:hover { background: #EDE8E2; }
+  .month-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; letter-spacing: -1px; }
+  .month-title span { color: #E8704A; font-style: italic; }
+  .event-count { margin-left: auto; font-size: 11px; color: #AAA; letter-spacing: 0.05em; }
+
+  /* CALENDAR */
+  .calendar { background: #fff; border: 1.5px solid #E0DAD2; border-radius: 14px; overflow: hidden; }
+  .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1.5px solid #E0DAD2; }
+  .cal-day-name { padding: 10px 0; text-align: center; font-size: 9px; letter-spacing: 0.15em; color: #BBB; font-weight: 500; border-right: 1px solid #F0EBE4; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-cell { min-height: 96px; padding: 8px 6px; border-right: 1px solid #F0EBE4; border-bottom: 1px solid #F0EBE4; position: relative; cursor: pointer; transition: background 0.12s; }
+  .cal-cell:hover { background: #EDE8E2; }
+  .cal-cell.empty { background: #FDFAF7; cursor: default; }
+  .cal-cell.selected { background: #F0EBE4; }
+  .day-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; color: #666; margin-bottom: 4px; }
+  .day-num.today { background: #1A1A1A; color: #fff; font-weight: 500; }
+  .day-num.sel { color: #1A1A1A; font-weight: 500; }
+  .event-pill { border-radius: 0 3px 3px 0; padding: 2px 5px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; cursor: pointer; transition: opacity 0.1s; border-left: 2px solid; }
+  .event-pill:hover { opacity: 0.7; }
+  .more-label { font-size: 9px; color: #BBB; padding-left: 4px; }
+  .add-dot { position: absolute; top: 5px; right: 5px; width: 18px; height: 18px; border-radius: 50%; background: #F0EBE4; color: #AAA; display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: 0; transition: opacity 0.1s; }
+  .cal-cell:hover .add-dot { opacity: 1; }
+
+  /* DAY PANEL */
+  .day-panel { margin-top: 14px; background: #fff; border: 1.5px solid #E0DAD2; border-radius: 10px; padding: 18px; }
+  .day-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .day-panel-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; }
+  .add-btn { background: #1A1A1A; border: none; color: #F7F3EE; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-size: 11px; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; transition: background 0.15s; }
+  .add-btn:hover { background: #333; }
+  .no-events { color: #CCC; font-size: 12px; padding: 4px 0; }
+  .event-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #FDFAF7; border-radius: 8px; border: 1px solid #F0EBE4; cursor: pointer; margin-bottom: 8px; transition: background 0.12s; }
+  .event-row:hover { background: #F0EBE4; }
+  .event-icon { font-size: 18px; }
+  .event-info { flex: 1; }
+  .event-title { font-size: 13px; font-weight: 500; }
+  .event-meta { font-size: 10px; color: #AAA; margin-top: 2px; }
+  .event-avatars { display: flex; gap: 3px; }
+  .mini-avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 7px; color: #fff; font-weight: 600; }
+
+  /* MODAL */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,26,26,0.55); align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-bg.open { display: flex; animation: fadeIn 0.15s; }
+  .modal-card { background: #F7F3EE; border: 1.5px solid #E0DAD2; border-radius: 14px; padding: 26px; width: 100%; max-width: 420px; animation: slideUp 0.18s cubic-bezier(.16,1,.3,1); }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 20px; }
+  .modal-title span { color: #BBB; font-size: 12px; font-family: 'DM Mono', monospace; margin-left: 8px; font-weight: 400; }
+  .field-label { font-size: 10px; color: #AAA; margin-bottom: 5px; letter-spacing: 0.1em; }
+  .field { margin-bottom: 13px; }
+  input[type=text], input[type=time], input[type=email], select, textarea {
+    width: 100%; padding: 9px 11px; background: #fff; border: 1.5px solid #E0DAD2;
+    border-radius: 7px; font-size: 13px; color: #1A1A1A; font-family: 'DM Mono', monospace;
+    outline: none; transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #1A1A1A; }
+  textarea { resize: none; font-size: 12px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+  .attendee-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .attendee-chip { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; cursor: pointer; font-size: 11px; border: 1.5px solid #E0DAD2; background: #fff; color: #AAA; transition: all 0.12s; }
+  .attendee-chip.active { }
+  .chip-avatar { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 7px; color: #fff; background: #E0DAD2; }
+  .notif-box { background: #fff; border: 1.5px solid #E0DAD2; border-radius: 8px; padding: 10px 14px; margin-bottom: 13px; }
+  .notif-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .notif-label { font-size: 11px; color: #555; letter-spacing: 0.05em; }
+  .toggle { width: 36px; height: 20px; border-radius: 10px; background: #E0DAD2; position: relative; cursor: pointer; transition: background 0.15s; }
+  .toggle.on { background: #1A1A1A; }
+  .toggle-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left 0.15s; }
+  .toggle.on .toggle-knob { left: 18px; }
+  .notif-all { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 11px; color: #888; }
+  .warn { font-size: 10px; color: #E8704A; margin-top: 6px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .btn-save { flex: 1; background: #1A1A1A; border: none; color: #F7F3EE; padding: 11px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; transition: background 0.15s; }
+  .btn-save:hover { background: #333; }
+  .btn-delete { background: #fff; border: 1.5px solid #FECACA; color: #EF4444; padding: 11px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: 'DM Mono', monospace; transition: all 0.12s; }
+  .btn-delete:hover { background: #fee2e2; }
+  .btn-cancel { background: #fff; border: 1.5px solid #E0DAD2; color: #AAA; padding: 11px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: 'DM Mono', monospace; transition: background 0.15s; }
+  .btn-cancel:hover { background: #EDE8E2; }
+
+  /* SETTINGS MODAL */
+  .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .settings-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 600; flex-shrink: 0; }
+  .settings-name { width: 90px; }
+
+  /* NOTIFICATION BAR */
+  .notif-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 200; color: #fff; padding: 10px 20px; font-size: 12px; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 8px; transform: translateY(-100%); transition: transform 0.2s cubic-bezier(.16,1,.3,1); }
+  .notif-bar.show { transform: translateY(0); }
+  .notif-bar.sending { background: #1A1A1A; }
+  .notif-bar.ok { background: #166534; }
+  .notif-bar.err { background: #7f1d1d; }
+
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .spinning { display: inline-block; animation: spin 1s linear infinite; }
+</style>
+</head>
+<body>
+
+<!-- NOTIFICATION BAR -->
+<div class="notif-bar" id="notifBar"></div>
+
+<div class="container">
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="logo">team<span>cal</span></div>
+      <div class="logo-sub">SHARED TEAM SCHEDULE · GMAIL SYNC</div>
+    </div>
+    <div class="members-row" id="membersRow">
+      <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
+    </div>
+  </div>
+
+  <!-- MONTH NAV -->
+  <div class="month-nav">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="month-title" id="monthTitle"></div>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    <div class="event-count" id="eventCount"></div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="calendar">
+    <div class="cal-header">
+      <div class="cal-day-name">SUN</div>
+      <div class="cal-day-name">MON</div>
+      <div class="cal-day-name">TUE</div>
+      <div class="cal-day-name">WED</div>
+      <div class="cal-day-name">THU</div>
+      <div class="cal-day-name">FRI</div>
+      <div class="cal-day-name">SAT</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- DAY PANEL -->
+  <div class="day-panel" id="dayPanel" style="display:none;">
+    <div class="day-panel-header">
+      <div class="day-panel-title" id="dayPanelTitle"></div>
+      <button class="add-btn" id="dayAddBtn">+ Add Event</button>
+    </div>
+    <div id="dayEventsList"></div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="modal-bg" id="eventModal">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">New Event</div>
+    <div class="field">
+      <div class="field-label">TITLE</div>
+      <input type="text" id="evtTitle" placeholder="Event title..." />
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="field-label">TYPE</div>
+        <select id="evtType">
+          <option value="meeting">◈ Meeting</option>
+          <option value="reminder">◎ Reminder</option>
+          <option value="deadline">▲ Deadline</option>
+          <option value="review">◉ Review</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">TIME</div>
+        <input type="time" id="evtTime" value="10:00" />
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">NOTES</div>
+      <textarea id="evtNotes" rows="2" placeholder="Optional notes..."></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label">ATTENDEES</div>
+      <div class="attendee-row" id="attendeeRow"></div>
+    </div>
+    <div class="notif-box">
+      <div class="notif-row">
+        <div class="notif-label">📧 Send Gmail notification</div>
+        <div class="toggle on" id="notifToggle" onclick="toggleNotif()"><div class="toggle-knob"></div></div>
+      </div>
+      <div id="notifOptions">
+        <label class="notif-all">
+          <input type="checkbox" id="notifyAll" style="width:auto;" /> Notify entire team (not just attendees)
+        </label>
+        <div class="warn" id="emailWarn" style="display:none;">⚠ Some attendees have no email set — go to Settings.</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" id="saveBtn" onclick="saveEvent()">Save & Notify</button>
+      <button class="btn-delete" id="deleteBtn" onclick="deleteEvent()" style="display:none;">Delete</button>
+      <button class="btn-cancel" onclick="closeModal('eventModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="settingsModal">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title">Team Settings <span>Add Gmail addresses</span></div>
+    <div id="settingsRows"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveSettings()">Save Settings</button>
+      <button class="btn-cancel" onclick="closeModal('settingsModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+let members = [
+  { id:1, name:"Alex",   email:"", color:"#E8704A", initials:"AX" },
+  { id:2, name:"Jordan", email:"", color:"#4A90D9", initials:"JD" },
+  { id:3, name:"Morgan", email:"", color:"#5BB87A", initials:"MG" },
+  { id:4, name:"Riley",  email:"", color:"#B87AC8", initials:"RL" },
+  { id:5, name:"Sam",    email:"", color:"#C8A83A", initials:"SM" },
+];
+
+let events = [
+  { id:1, title:"Sprint Planning",  date:"2026-05-11", type:"meeting",  members:[1,2,3], time:"10:00", notes:"Q2 sprint kickoff" },
+  { id:2, title:"Design Review",    date:"2026-05-14", type:"review",   members:[2,4],   time:"14:00", notes:"" },
+  { id:3, title:"Project Deadline", date:"2026-05-20", type:"deadline", members:[1,2,3,4,5], time:"17:00", notes:"Final deliverables due" },
+  { id:4, title:"Weekly Sync",      date:"2026-05-07", type:"meeting",  members:[1,3,5], time:"09:00", notes:"" },
+];
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const TYPE_ICONS = { meeting:"◈", reminder:"◎", deadline:"▲", review:"◉" };
+const TYPE_LABELS = { meeting:"Meeting", reminder:"Reminder", deadline:"Deadline", review:"Review" };
+
+let cur = { year:2026, month:4 };
+let selectedDay = null;
+let editingId = null;
+let sendNotif = true;
+let formMembers = [1];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function dateStr(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function fmtDate(str){ if(!str) return ''; const [y,m,d]=str.split('-'); return `${MONTHS[parseInt(m)-1]} ${parseInt(d)}, ${y}`; }
+function getDays(y,m){ return new Date(y,m+1,0).getDate(); }
+function getFirst(y,m){ return new Date(y,m,1).getDay(); }
+function getEventsForDay(d){ return events.filter(e=>e.date===dateStr(cur.year,cur.month,d)); }
+function isToday(d){ const t=new Date(); return d===t.getDate()&&cur.month===t.getMonth()&&cur.year===t.getFullYear(); }
+
+// ── NOTIFICATION BAR ──────────────────────────────────────────────────────
+function showNotif(status, msg){
+  const bar = document.getElementById('notifBar');
+  bar.className = `notif-bar show ${status}`;
+  bar.innerHTML = status==='sending' ? `<span class="spinning">◌</span> ${msg}` : msg;
+  if(status!=='sending') setTimeout(()=>{ bar.className='notif-bar'; }, 5000);
+}
+
+// ── GMAIL ─────────────────────────────────────────────────────────────────
+async function sendGmail(evt, action){
+  const attendeeNames = members.filter(m=>evt.members.includes(m.id)).map(m=>m.name).join(', ');
+  const notifyAll = document.getElementById('notifyAll')?.checked;
+  const recipients = notifyAll
+    ? members.filter(m=>m.email).map(m=>m.email)
+    : members.filter(m=>evt.members.includes(m.id)&&m.email).map(m=>m.email);
+
+  if(recipients.length===0) return { success:false, error:'No email addresses configured.' };
+
+  const typeIcon = TYPE_ICONS[evt.type]||'';
+  const typeLabel = TYPE_LABELS[evt.type]||evt.type;
+  const actionVerb = action==='created'?'added':action==='updated'?'updated':'cancelled';
+  const subject = `[TeamCal] ${typeIcon} ${evt.title} — ${actionVerb} for ${fmtDate(evt.date)}`;
+
+  const htmlBody = `<div style="font-family:'Courier New',monospace;background:#0F0F0F;color:#E8E0D5;padding:32px;border-radius:12px;max-width:520px;margin:0 auto;">
+<div style="font-size:11px;letter-spacing:.15em;color:#666;margin-bottom:8px;text-transform:uppercase;">TeamCal Notification</div>
+<div style="font-size:22px;font-weight:800;color:#E8E0D5;margin-bottom:4px;">${evt.title}</div>
+<div style="font-size:13px;color:#E8704A;margin-bottom:24px;">${typeIcon} ${typeLabel} · ${action.toUpperCase()}</div>
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="padding:8px 0;border-bottom:1px solid #222;color:#666;font-size:11px;width:100px;">DATE</td><td style="padding:8px 0;border-bottom:1px solid #222;font-size:13px;">${fmtDate(evt.date)}</td></tr>
+<tr><td style="padding:8px 0;border-bottom:1px solid #222;color:#666;font-size:11px;">TIME</td><td style="padding:8px 0;border-bottom:1px solid #222;font-size:13px;">${evt.time}</td></tr>
+<tr><td style="padding:8px 0;border-bottom:1px solid #222;color:#666;font-size:11px;">ATTENDEES</td><td style="padding:8px 0;border-bottom:1px solid #222;font-size:13px;">${attendeeNames||'All team'}</td></tr>
+${evt.notes?`<tr><td style="padding:8px 0;color:#666;font-size:11px;">NOTES</td><td style="padding:8px 0;font-size:13px;">${evt.notes}</td></tr>`:''}
+</table>
+<div style="margin-top:24px;font-size:11px;color:#444;">Sent via TeamCal · ${new Date().toLocaleString()}</div>
+</div>`;
+
+  const prompt = `You are a Gmail assistant. Use the Gmail MCP tool to create a draft email:
+- to: ${JSON.stringify(recipients)}
+- subject: "${subject}"
+- htmlBody: ${JSON.stringify(htmlBody)}
+Call the Gmail create_draft tool now. Return only "DRAFT_CREATED" if successful.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        mcp_servers:[{type:'url',url:'https://gmailmcp.googleapis.com/mcp/v1',name:'gmail-mcp'}],
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(b=>b.text||'').join('')||'';
+    const toolUsed = data.content?.some(b=>b.type==='mcp_tool_use');
+    if(toolUsed||text.includes('DRAFT_CREATED')||text.toLowerCase().includes('draft')){
+      return { success:true, count:recipients.length };
+    }
+    return { success:false, error: text||'No draft created' };
+  } catch(e){
+    return { success:false, error:e.message };
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){
+  renderMembersRow();
+  renderMonthNav();
+  renderCalendar();
+  if(selectedDay) renderDayPanel();
+}
+
+function renderMembersRow(){
+  const row = document.getElementById('membersRow');
+  row.innerHTML = '';
+  members.forEach(m=>{
+    const b = document.createElement('div');
+    b.className = 'member-badge';
+    b.style.borderColor = m.color+'44';
+    b.style.background = m.color+'18';
+    b.style.color = m.color;
+    b.innerHTML = `<div class="member-avatar" style="background:${m.color}">${m.initials}</div>${m.name}${m.email?'<span style="font-size:9px;opacity:.6">✓</span>':''}`;
+    row.appendChild(b);
+  });
+  const btn = document.createElement('button');
+  btn.className = 'settings-btn';
+  btn.textContent = '⚙ Settings';
+  btn.onclick = openSettings;
+  row.appendChild(btn);
+}
+
+function renderMonthNav(){
+  document.getElementById('monthTitle').innerHTML = `${MONTHS[cur.month]} <span>${cur.year}</span>`;
+  const count = events.filter(e=>e.date.startsWith(`${cur.year}-${String(cur.month+1).padStart(2,'0')}`)).length;
+  document.getElementById('eventCount').textContent = `${count} event${count!==1?'s':''} this month`;
+}
+
+function renderCalendar(){
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const first = getFirst(cur.year, cur.month);
+  const days = getDays(cur.year, cur.month);
+
+  for(let i=0;i<first;i++){
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell empty';
+    grid.appendChild(cell);
+  }
+
+  for(let d=1;d<=days;d++){
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (selectedDay===d?' selected':'');
+    cell.onclick = ()=>selectDay(d);
+
+    const num = document.createElement('div');
+    num.className = 'day-num' + (isToday(d)?' today':'') + (selectedDay===d&&!isToday(d)?' sel':'');
+    num.textContent = d;
+    cell.appendChild(num);
+
+    const dayEvts = getEventsForDay(d);
+    dayEvts.slice(0,3).forEach(evt=>{
+      const m0 = members.find(m=>m.id===evt.members[0]);
+      const pill = document.createElement('div');
+      pill.className = 'event-pill';
+      pill.style.borderLeftColor = m0?.color||'#E8704A';
+      pill.style.background = (m0?.color||'#E8704A')+'22';
+      pill.style.color = m0?.color||'#E8704A';
+      pill.textContent = (TYPE_ICONS[evt.type]||'') + ' ' + evt.title;
+      pill.onclick = (e)=>{ e.stopPropagation(); openEdit(evt); };
+      cell.appendChild(pill);
+    });
+    if(dayEvts.length>3){
+      const more = document.createElement('div');
+      more.className = 'more-label';
+      more.textContent = `+${dayEvts.length-3}`;
+      cell.appendChild(more);
+    }
+
+    const dot = document.createElement('div');
+    dot.className = 'add-dot';
+    dot.textContent = '+';
+    dot.onclick = (e)=>{ e.stopPropagation(); openAdd(d); };
+    cell.appendChild(dot);
+
+    grid.appendChild(cell);
+  }
+}
+
+function renderDayPanel(){
+  const panel = document.getElementById('dayPanel');
+  const title = document.getElementById('dayPanelTitle');
+  const list = document.getElementById('dayEventsList');
+  panel.style.display = 'block';
+  title.textContent = `${MONTHS[cur.month]} ${selectedDay}`;
+  document.getElementById('dayAddBtn').onclick = ()=>openAdd(selectedDay);
+
+  list.innerHTML = '';
+  const dayEvts = getEventsForDay(selectedDay);
+  if(dayEvts.length===0){
+    list.innerHTML = '<div class="no-events">No events · click + to add one.</div>';
+    return;
+  }
+  dayEvts.forEach(evt=>{
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    row.onclick = ()=>openEdit(evt);
+    const avatarsHtml = evt.members.map(mid=>{
+      const m=members.find(x=>x.id===mid);
+      return `<div class="mini-avatar" style="background:${m?.color}">${m?.initials}</div>`;
+    }).join('');
+    row.innerHTML = `
+      <div class="event-icon">${TYPE_ICONS[evt.type]||''}</div>
+      <div class="event-info">
+        <div class="event-title">${evt.title}</div>
+        <div class="event-meta">${evt.time} · ${TYPE_LABELS[evt.type]||evt.type}${evt.notes?' · '+evt.notes:''}</div>
+      </div>
+      <div class="event-avatars">${avatarsHtml}</div>`;
+    list.appendChild(row);
+  });
+}
+
+// ── INTERACTIONS ──────────────────────────────────────────────────────────
+function changeMonth(dir){
+  cur.month += dir;
+  if(cur.month>11){ cur.month=0; cur.year++; }
+  if(cur.month<0){ cur.month=11; cur.year--; }
+  selectedDay = null;
+  document.getElementById('dayPanel').style.display='none';
+  render();
+}
+
+function selectDay(d){
+  selectedDay = selectedDay===d ? null : d;
+  if(!selectedDay) document.getElementById('dayPanel').style.display='none';
+  render();
+  if(selectedDay) renderDayPanel();
+}
+
+function openAdd(day){
+  editingId = null;
+  formMembers = [1];
+  document.getElementById('evtTitle').value='';
+  document.getElementById('evtType').value='meeting';
+  document.getElementById('evtTime').value='10:00';
+  document.getElementById('evtNotes').value='';
+  document.getElementById('modalTitle').innerHTML = `New Event <span>${dateStr(cur.year,cur.month,day)}</span>`;
+  document.getElementById('deleteBtn').style.display='none';
+  document.getElementById('saveBtn').textContent='Save & Notify';
+  sendNotif=true;
+  document.getElementById('notifToggle').className='toggle on';
+  document.getElementById('notifOptions').style.display='block';
+  renderAttendeeChips();
+  updateEmailWarn();
+  openModal('eventModal');
+  // Store date on modal for save
+  document.getElementById('eventModal').dataset.date = dateStr(cur.year,cur.month,day);
+}
+
+function openEdit(evt){
+  editingId = evt.id;
+  formMembers = [...evt.members];
+  document.getElementById('evtTitle').value = evt.title;
+  document.getElementById('evtType').value = evt.type;
+  document.getElementById('evtTime').value = evt.time;
+  document.getElementById('evtNotes').value = evt.notes||'';
+  document.getElementById('modalTitle').innerHTML = `Edit Event <span>${evt.date}</span>`;
+  document.getElementById('deleteBtn').style.display='block';
+  document.getElementById('saveBtn').textContent='Save & Notify';
+  sendNotif=true;
+  document.getElementById('notifToggle').className='toggle on';
+  document.getElementById('notifOptions').style.display='block';
+  renderAttendeeChips();
+  updateEmailWarn();
+  openModal('eventModal');
+  document.getElementById('eventModal').dataset.date = evt.date;
+}
+
+function renderAttendeeChips(){
+  const row = document.getElementById('attendeeRow');
+  row.innerHTML='';
+  members.forEach(m=>{
+    const chip = document.createElement('div');
+    const active = formMembers.includes(m.id);
+    chip.className = 'attendee-chip' + (active?' active':'');
+    if(active){ chip.style.borderColor=m.color; chip.style.background=m.color+'22'; chip.style.color=m.color; }
+    chip.innerHTML=`<div class="chip-avatar" style="background:${active?m.color:'#E0DAD2'}">${m.initials}</div>${m.name}`;
+    chip.onclick=()=>toggleMember(m.id);
+    row.appendChild(chip);
+  });
+}
+
+function toggleMember(id){
+  if(formMembers.includes(id)) formMembers=formMembers.filter(x=>x!==id);
+  else formMembers.push(id);
+  renderAttendeeChips();
+  updateEmailWarn();
+}
+
+function updateEmailWarn(){
+  const warn = document.getElementById('emailWarn');
+  const missing = members.filter(m=>formMembers.includes(m.id)&&!m.email).length>0;
+  warn.style.display = (sendNotif&&missing)?'block':'none';
+}
+
+function toggleNotif(){
+  sendNotif=!sendNotif;
+  document.getElementById('notifToggle').className='toggle'+(sendNotif?' on':'');
+  document.getElementById('notifOptions').style.display=sendNotif?'block':'none';
+  document.getElementById('saveBtn').textContent=sendNotif?'Save & Notify':'Save Event';
+}
+
+async function saveEvent(){
+  const title = document.getElementById('evtTitle').value.trim();
+  if(!title) return;
+  const date = document.getElementById('eventModal').dataset.date;
+  const evt = {
+    id: editingId||Date.now(),
+    title,
+    date,
+    type: document.getElementById('evtType').value,
+    time: document.getElementById('evtTime').value,
+    notes: document.getElementById('evtNotes').value,
+    members: formMembers.length>0?formMembers:[1]
+  };
+  const action = editingId?'updated':'created';
+  if(editingId) events=events.map(e=>e.id===editingId?evt:e);
+  else events.push(evt);
+  closeModal('eventModal');
+  render();
+  if(selectedDay) renderDayPanel();
+
+  if(sendNotif){
+    showNotif('sending','Sending Gmail drafts...');
+    const result = await sendGmail(evt, action);
+    if(result.success) showNotif('ok',`✓ Gmail draft created for ${result.count} recipient${result.count!==1?'s':''}`);
+    else showNotif('err','Gmail: '+result.error);
+  }
+}
+
+async function deleteEvent(){
+  if(!editingId) return;
+  const evt = events.find(e=>e.id===editingId);
+  events = events.filter(e=>e.id!==editingId);
+  closeModal('eventModal');
+  render();
+  if(selectedDay) renderDayPanel();
+
+  if(sendNotif&&evt){
+    showNotif('sending','Sending cancellation drafts...');
+    const result = await sendGmail(evt,'cancelled');
+    if(result.success) showNotif('ok',`✓ Cancellation draft created for ${result.count} recipient${result.count!==1?'s':''}`);
+    else showNotif('err','Gmail: '+result.error);
+  }
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────
+function openSettings(){
+  const rows = document.getElementById('settingsRows');
+  rows.innerHTML='';
+  members.forEach(m=>{
+    const row = document.createElement('div');
+    row.className='settings-row';
+    row.innerHTML=`
+      <div class="settings-avatar" style="background:${m.color}">${m.initials}</div>
+      <input class="settings-name" type="text" id="sname_${m.id}" value="${m.name}" placeholder="Name"/>
+      <input type="email" id="semail_${m.id}" value="${m.email}" placeholder="email@gmail.com" style="flex:1"/>`;
+    rows.appendChild(row);
+  });
+  openModal('settingsModal');
+}
+
+function saveSettings(){
+  members=members.map(m=>({
+    ...m,
+    name: document.getElementById(`sname_${m.id}`)?.value||m.name,
+    email: document.getElementById(`semail_${m.id}`)?.value||m.email,
+  }));
+  closeModal('settingsModal');
+  render();
+}
+
+// ── MODAL UTILS ───────────────────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.getElementById('eventModal').onclick=()=>closeModal('eventModal');
+document.getElementById('settingsModal').onclick=()=>closeModal('settingsModal');
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
